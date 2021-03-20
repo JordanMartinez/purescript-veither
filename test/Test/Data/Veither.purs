@@ -38,10 +38,15 @@ v2x = Veither $ inj _x x :: Veither E2 Int
 v2y = Veither $ inj _y y :: Veither E2 Int
 
 onX :: forall a. (Int -> a) -> Variant E1 -> a
-onX doX = case_ # on _x doX
+onX doX = 
+  case_ 
+    # on _x doX
 
 onXY :: forall a. (Int -> a) -> (Int -> a) -> Variant E2 -> a
-onXY doX doY = case_ # on _x doX # on _y doY
+onXY doX doY = 
+  case_ 
+    # on _x doX 
+    # on _y doY
 
 addOne :: Int -> Int
 addOne val = val + 1
