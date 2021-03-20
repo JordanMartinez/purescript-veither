@@ -86,10 +86,7 @@ instance altVeither :: Alt (Veither errorRows) where
 
 instance extendVeither :: Extend (Veither errorRows) where
   extend :: forall b a. (Veither errorRows a -> b) -> Veither errorRows a -> Veither errorRows b
-  extend f v = vfromRight (coerceR v) (\_ -> Veither $ inj _veither (f v)) v
-    where
-    coerceR ∷ forall a b. Veither errorRows a → Veither errorRows b
-    coerceR = unsafeCoerce
+  extend f v = map (\_ -> (f v)) v
 
 derive newtype instance showVeither :: Show (Variant ("_" :: a | errorRows)) => Show (Veither errorRows a)
 
@@ -121,17 +118,17 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
   coerceR ∷ Variant ("_" ∷ a | errorRows) → Variant errorRows
   coerceR = unsafeCoerce
 
-vfromRight ∷ forall errorRows a b. b → (a → b) → Veither errorRows a → b
-vfromRight default handleSuccess (Veither v) = case coerceV v of
-  VariantRep a | a.type == "_" → handleSuccess a.value
+vfromRight ∷ forall errorRows a b. a → Veither errorRows a → a
+vfromRight default (Veither v) = case coerceV v of
+  VariantRep a | a.type == "_" → a.value
   _ → default
   where
   coerceV ∷ Variant ("_" ∷ a | errorRows) → VariantRep a
   coerceV = unsafeCoerce
 
-vfromRight' ∷ forall errorRows a b. (Unit → b) → (a → b) → Veither errorRows a → b
-vfromRight' default handleSuccess (Veither v) = case coerceV v of
-  VariantRep a | a.type == "_" → handleSuccess a.value
+vfromRight' ∷ forall errorRows a. (Unit → a) → Veither errorRows a → a
+vfromRight' default (Veither v) = case coerceV v of
+  VariantRep a | a.type == "_" → a.value
   _ → default unit
   where
   coerceV ∷ Variant ("_" ∷ a | errorRows) → VariantRep a
