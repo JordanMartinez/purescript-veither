@@ -5,6 +5,8 @@
   , "invariant"
   , "maybe"
   , "psci-support"
+  , "quickcheck"
+  , "spec"
   , "transformers"
   , "variant"
   ]
