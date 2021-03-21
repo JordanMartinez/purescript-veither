@@ -2,14 +2,11 @@ module Test.Data.Veither where
 
 import Prelude
 
-import Control.Monad.Gen (chooseInt)
-import Data.Array (all)
 import Data.Maybe (Maybe(..))
 import Data.Variant (Variant, case_, on, inj)
 import Data.Veither (Veither(..), veither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote')
 import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
-import Test.QuickCheck (quickCheckGen)
 import Test.QuickCheck.Laws (A, B, C, checkLaws)
 import Test.QuickCheck.Laws.Control as Control
 import Test.QuickCheck.Laws.Data as Data
