@@ -2,10 +2,12 @@
 , dependencies =
   [ "control"
   , "enums"
+  , "heterogenous"
   , "invariant"
   , "maybe"
   , "psci-support"
   , "quickcheck"
+  , "quickcheck-laws"
   , "spec"
   , "transformers"
   , "variant"
