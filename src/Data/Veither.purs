@@ -14,7 +14,7 @@ import Data.Maybe (Maybe(..), fromJust, maybe, maybe')
 import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Traversable (class Traversable)
-import Data.Variant (Variant, inj, on)
+import Data.Variant (Variant, case_, inj, on)
 import Data.Variant.Internal (VariantRep(..), impossible)
 import Partial.Unsafe (unsafePartial)
 import Prim.Row as Row
@@ -219,6 +219,14 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
 
   coerceR ∷ Variant ("_" ∷ a | errorRows) → Variant errorRows
   coerceR = unsafeCoerce
+
+-- | Extract the value out of the `Veither` when there are no other possible values
+-- |
+-- | ```
+-- | vsafe (pure x) == x
+-- | ```
+vsafe ∷ forall a. Veither () a → a
+vsafe (Veither v) = on _veither identity case_ v
 
 -- | Convert an `Either` into a `Veither`.
 -- |

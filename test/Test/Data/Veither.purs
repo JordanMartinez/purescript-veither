@@ -5,7 +5,7 @@ import Prelude
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Variant (Variant, case_, on, inj)
-import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote')
+import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote', vsafe)
 import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Test.QuickCheck.Laws (A, B, C, checkLaws)
@@ -68,6 +68,8 @@ spec = do
       veither (onXY identity identity) identity v2a `shouldEqual` a
       veither (onXY identity identity) identity v2x `shouldEqual` x
       veither (onXY identity identity) identity v2y `shouldEqual` y
+    it "vsafe works" do
+      vsafe (pure 1) `shouldEqual` 1
     it "vfromEither works" do
       vfromEither _x er `shouldEqual` v1a
       vfromEither _x el `shouldEqual` v1x
