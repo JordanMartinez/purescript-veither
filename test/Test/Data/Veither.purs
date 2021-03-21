@@ -138,6 +138,8 @@ spec = do
       Data.checkFunctor prx2Veither
       -- Data.checkFunctorWithIndex prx2Veither
       Data.checkFoldableFunctor prx2Veither
+      Control.checkApply prx2Veither
+      Control.checkApplicative prx2Veither
       Control.checkAlt prx2Veither
       Control.checkBind prx2Veither
       Control.checkMonad prx2Veither

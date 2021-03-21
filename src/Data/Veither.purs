@@ -54,10 +54,10 @@ instance invariantVeither :: Invariant (Veither errorRows) where
 
 instance functorVeither ∷ Functor (Veither errorRows) where
   map ∷ forall a b. (a → b) → Veither errorRows a → Veither errorRows b
-  map f (Veither v) = Veither case coerceV v of
+  map f (Veither v) = case coerceV v of
       VariantRep v' | v'.type == "_" →
-        inj _veither (f v'.value)
-      _ → coerceR v
+        Veither (inj _veither (f v'.value))
+      _ → Veither (coerceR v)
     where
     coerceV ∷ forall a. Variant ("_" ∷ a | errorRows) → VariantRep a
     coerceV = unsafeCoerce
@@ -67,11 +67,10 @@ instance functorVeither ∷ Functor (Veither errorRows) where
 
 instance applyVeither ∷ Apply (Veither errorRows) where
   apply ∷ forall a b. Veither errorRows (a → b) → Veither errorRows a → Veither errorRows b
-  apply (Veither f) (Veither a) = Veither case coerceVF f, coerceVA a of
-      VariantRep f', VariantRep a'
-        | f'.type == "_" && a'.type == "_" →
-          inj _veither (f'.value a'.value)
-      _, _ → coerceR f
+  apply (Veither f) va = case coerceVF f of
+      VariantRep f'
+        | f'.type == "_" → f'.value <$> va
+      _ → Veither (coerceR f)
     where
     coerceVF ∷ forall a b. Variant ("_" ∷ (a → b) | errorRows) → VariantRep (a → b)
     coerceVF = unsafeCoerce
@@ -84,7 +83,7 @@ instance applyVeither ∷ Apply (Veither errorRows) where
 
 instance applicativeVeither ∷ Applicative (Veither errorRows) where
   pure ∷ forall a. a → Veither errorRows a
-  pure arg = Veither $ inj _veither arg
+  pure arg = Veither (inj _veither arg)
 
 instance bindVeither ∷ Bind (Veither errorRows) where
   bind ∷ forall a b. Veither errorRows a → (a → Veither errorRows b) → Veither errorRows b
