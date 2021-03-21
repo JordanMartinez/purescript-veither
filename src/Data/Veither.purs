@@ -24,9 +24,68 @@ import Test.QuickCheck.Gen (Gen, elements)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
+-- | `Veither` is the same as `Either` except that the `l` type can be zero to many different types.
+-- | Conceptually, `Veither` has the following definition:
+-- |
+-- | ```
+-- | data Veither l1 l2 ... ln a 
+-- |   = Right a
+-- |   | L1 l1
+-- |   | L2 l2
+-- |   | ...
+-- |   | LN ln
+-- | ```
+-- |
+-- | `Veither` is monadic via the `a` type parameter. For example, the `Int` type below
+-- | represents the 'happy' path and any other errors will shortcircuit the computation:
+-- |
+-- | ```
+-- | foo :: Variant (e1 :: Error1, e2 :: Error2) Int
+-- | foo = do
+-- |   i1 <- returnIntOrFailWithError1
+-- |   i2 <- returnIntOrFailWithError2
+-- |   pure $ i1 + i2
+-- | ````
+-- | 
+-- | Creating a value of `Veither` can be done in one of two ways:
+-- |  - using `pure`: `pure 4 :: forall errorRows. Veither errorRows Int`
+-- |  - using `inj`: `(Veither (inj (Proxy :: Proxy "foo") String)) :: forall a. Veither (foo :: String) a`
+-- | 
+-- | One can also change an `Either a b` into a `Veither (x :: a) b` using `vfromEither`.
+-- | 
+-- | To consume a `Veither` value, use `veither`, `vfromRight`, `vfromLeft`, `vnote`, or `vhush`. For example,
+-- | one might do the following using `veither`:
+-- | 
+-- | ```
+-- | import Type.Proxy (Proxy(..))
+-- | import Data.Variant (case_, on, inj)
+-- | 
+-- | -- Given a variant value...
+-- | val :: Veither (a :: Int, b :: String, c :: Boolean) Number
+-- | val = pure 5
+-- | 
+-- | -- you consume it using the following pattern. You'll need to handle every possible error type
+-- | consume :: Veither (a :: Int, b :: String, c :: Boolean) Number -> String
+-- | consume v = veither handleError handleSuccess v
+-- |   where
+-- |   handleError :: Variant (a :: Int, b :: String, c :: Boolean)
+-- |   handleError = 
+-- |     case_
+-- |       # on (Proxy :: Proxy "a") show
+-- |       # on (Proxy :: Proxy "b") show
+-- |       # on (Proxy :: Proxy "c") show
+-- | 
+-- |   handleSuccess :: Number -> String
+-- |   handleSuccess = show
+-- | ```
+-- | 
+-- | `Veither` has all the instances that `Either` has, except for `Eq1` and `Ord1`, 
+-- | which simply haven't been implemented yet.
 newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
+-- | Proxy type for `Veither`'s happy path (e.g.. `Either`'s `Right` constructor). 
+-- | Note: the label "_" intentionally doesn't match the name of this value (i.e. '_veither').
 _veither ∷ Proxy "_"
 _veither = Proxy
 
@@ -133,6 +192,23 @@ derive newtype instance boundedEnumVeither :: BoundedEnum (Variant ("_" :: a | e
 instance semigroupVeither :: (Semigroup b) => Semigroup (Veither errorRows b) where
   append x y = append <$> x <*> y
 
+-- | Convert a `Veither` into a value by defining how to handle each possible value.
+-- | Below is an example of the typical usage.
+-- |
+-- | ```
+-- | consume :: Veither (a :: Int, b :: String, c :: Boolean) Number -> String
+-- | consume v = veither handleError handleSuccess v
+-- |   where
+-- |   handleError :: Variant (a :: Int, b :: String, c :: Boolean)
+-- |   handleError = 
+-- |     case_
+-- |       # on (Proxy :: Proxy "a") show
+-- |       # on (Proxy :: Proxy "b") show
+-- |       # on (Proxy :: Proxy "c") show
+-- | 
+-- |   handleSuccess :: Number -> String
+-- |   handleSuccess = show
+-- | ```
 veither ∷ forall errorRows a b. (Variant errorRows → b) → (a → b) → Veither errorRows a → b
 veither handleError handleSuccess (Veither v) = case coerceV v of
   VariantRep a | a.type == "_" → handleSuccess a.value
@@ -144,12 +220,34 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
   coerceR ∷ Variant ("_" ∷ a | errorRows) → Variant errorRows
   coerceR = unsafeCoerce
 
+-- | Convert an `Either` into a `Veither`.
+-- |
+-- | ```
+-- | p :: Proxy "foo"
+-- | p = Proxy
+-- |
+-- | vfromEither p (Left Int)  :: forall a. Variant (foo :: Int) a
+-- | vfromEither p (Right Int) :: forall a. Variant (foo :: a  ) Int
+-- | ```
 vfromEither ∷ forall sym otherRows errorRows a b
   .  IsSymbol sym 
   => Row.Cons sym a otherRows ("_" :: b | errorRows) 
   => Proxy sym -> Either a b -> Veither errorRows b
 vfromEither proxy = either (\e -> Veither (inj proxy e)) (\a -> Veither (inj _veither a))
 
+-- | Extract the value from a `Veither`, using a default value in case the underlying
+-- | `Variant` is storing one of the error rows' values.
+-- |
+-- | ```
+-- | vError :: Veither (foo :: Int) String
+-- | vError = Veither (inj (Proxy :: Proxy "foo") 4)
+-- |
+-- | vSuccess :: Veither (foo :: Int) String
+-- | vSuccess = pure "yay"
+-- |
+-- | vfromRight "" vError   == ""
+-- | vfromRight "" vSuccess == "yay"
+-- | ```
 vfromRight ∷ forall errorRows a. a → Veither errorRows a → a
 vfromRight default (Veither v) = case coerceV v of
   VariantRep a | a.type == "_" → a.value
@@ -166,6 +264,19 @@ vfromRight' default (Veither v) = case coerceV v of
   coerceV ∷ Variant ("_" ∷ a | errorRows) → VariantRep a
   coerceV = unsafeCoerce
 
+-- | Extract the error value from a `Veither`, using a default value in case the underlying
+-- | `Variant` is storing the `("_" :: a)` rows' values.
+-- |
+-- | ```
+-- | vError :: Veither (foo :: Int) String
+-- | vError = Veither (inj (Proxy :: Proxy "foo") 4)
+-- |
+-- | vSuccess :: Veither (foo :: Int) String
+-- | vSuccess = pure "yay"
+-- |
+-- | vfromLeft  8 (case_ # on (Proxy :: Proxy "foo") identity) vError   == 4
+-- | vfromRight 8 (case_ # on (Proxy :: Proxy "foo") identity) vSuccess == 8
+-- | ```
 vfromLeft ∷ forall errorRows a b. b → (Variant errorRows → b) → Veither errorRows a → b
 vfromLeft default handleFailures (Veither v) =
   on _veither (const default) handleFailures v
@@ -174,6 +285,21 @@ vfromLeft' ∷ forall errorRows a b. (Unit → b) → (Variant errorRows → b) 
 vfromLeft' default handleFailures (Veither v) =
   on _veither (\_ → default unit) handleFailures v
 
+-- | Convert a `Maybe` value into a `Veither` value using a default value when the `Maybe` value is `Nothing.
+-- |
+-- | ```
+-- | mJust :: Maybe String
+-- | mJust = Just "x"
+-- |
+-- | mNothing :: Maybe String
+-- | mNothing = Nothing
+-- |
+-- | _foo :: Proxy "foo"
+-- | _foo = Proxy
+-- |
+-- | vnote _foo 2 mJust    == (pure "y")             :: Veither (foo :: Int) String
+-- | vnote _foo 2 mNothing == (Veither (inj _foo 2)) :: Veither (foo :: Int) String
+-- | ```
 vnote ∷ forall otherErrorRows errorRows s a b
    . Row.Cons s a otherErrorRows ("_" ∷ b | errorRows)
   => IsSymbol s
@@ -186,6 +312,7 @@ vnote' ∷ forall otherErrorRows errorRows s a b
   => Proxy s → (Unit → a) → Maybe b → Veither errorRows b
 vnote' proxy f may = Veither (maybe' (inj proxy <<< f) (\b → inj _veither b) may)
 
+-- | Convert a `Veither` value into a `Maybe` value.
 vhush ∷ forall errorRows a. Veither errorRows a → Maybe a
 vhush = veither (const Nothing) Just
 
