@@ -29,8 +29,8 @@ newtype Veither errorRows a = Veither (Variant ("_" :: a | errorRows))
 -- `=~=` means 'isomorphic to'
 --
 -- Veither () a =~= a
--- Veither (foo :: Int) a == Either Int a
--- Veither (foo :: Int, bar :: String) a == Either Int (Either String a)
+-- Veither (foo :: Int) a =~= Either Int a
+-- Veither (foo :: Int, bar :: String) a =~= Either Int (Either String a)
 ```
 
 Now we can write our monadic `Either` code without the 'same error type' restriction:
