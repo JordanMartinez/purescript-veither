@@ -4,14 +4,20 @@ import Prelude
 
 import Control.Alt (class Alt)
 import Control.Extend (class Extend)
+import Data.Array.NonEmpty as NEA
 import Data.Enum (class BoundedEnum, class Enum)
 import Data.Functor.Invariant (class Invariant, imapF)
-import Data.Maybe (Maybe(..), maybe, maybe')
+import Data.List as L
+import Data.Maybe (Maybe(..), fromJust, maybe, maybe')
 import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol)
 import Data.Variant (Variant, inj, on)
 import Data.Variant.Internal (VariantRep(..))
+import Partial.Unsafe (unsafePartial)
 import Prim.Row as Row
+import Prim.RowList as RL
+import Test.QuickCheck (class Arbitrary, arbitrary)
+import Test.QuickCheck.Gen (Gen, elements)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -156,3 +162,49 @@ vnote' proxy f may = Veither (maybe' (inj proxy <<< f) (\b → inj _veither b) m
 
 vhush ∷ forall errorRows a. Veither errorRows a → Maybe a
 vhush = veither (const Nothing) Just
+
+instance arbitraryVeither :: (
+  RL.RowToList ("_" :: a | errorRows) rowList,
+  VariantArbitrarys ("_" :: a | errorRows) rowList
+  ) => Arbitrary (Veither errorRows a) where
+  arbitrary = do
+    let
+      -- Create the list of generators
+      vaList :: L.List (Gen (Variant ("_" :: a | errorRows)))
+      vaList = variantArbitrarys (Proxy :: Proxy ("_" :: a | errorRows)) (Proxy :: Proxy rowList)
+
+      -- This is guaranteed to be non-empty because there will always be a ("_" :: a) row
+      vaNEA = unsafePartial $ fromJust $ NEA.fromFoldable vaList
+
+    -- Choose one of the rows' generators
+    variantGenerator <- elements vaNEA
+    -- use it to generate a Variant whose rows fit the Veither rows
+    randomVariant <- variantGenerator
+    pure $ Veither randomVariant
+
+-- | Creates a list where each generator within the list will produce a Variant
+-- | for one of the rows in `("_" :: a | errorRows)`
+class VariantArbitrarys :: Row Type -> RL.RowList Type -> Constraint
+class VariantArbitrarys finalRow currentRL where
+  variantArbitrarys :: Proxy finalRow -> Proxy currentRL -> L.List (Gen (Variant finalRow))
+
+instance variantArbitrarysNil ∷ VariantArbitrarys ignore RL.Nil where
+  variantArbitrarys _ _ = L.Nil
+
+instance variantArbitrarysCons ∷ (
+  IsSymbol sym, 
+  VariantArbitrarys final rlTail, 
+  Row.Cons sym a rowTail final,
+  Arbitrary a
+  ) ⇒ VariantArbitrarys final (RL.Cons sym a rlTail) where
+  variantArbitrarys _ _ = do
+    let 
+      va :: Gen (Variant final)
+      va = do
+        a <- arbitrary :: Gen a
+        let
+          v :: Variant final
+          v = inj (Proxy :: Proxy sym) a
+        pure v
+    
+    L.Cons va (variantArbitrarys (Proxy :: Proxy final) (Proxy ∷ Proxy rlTail))
