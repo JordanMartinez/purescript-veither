@@ -231,7 +231,8 @@ instance variantArbitrarysCons ∷ (
 foreign import data UnknownVariantValue :: Type 
 
 instance coarbitraryVeither :: (
-  RL.RowToList ("_" :: a | errorRows) rl
+  RL.RowToList ("_" :: a | errorRows) rl,
+  VariantCoarbitrarys rl
   ) => Coarbitrary (Veither errorRows a) where
   coarbitrary :: forall r. Veither errorRows a -> Gen r -> Gen r
   coarbitrary (Veither v) = case coerceV v of

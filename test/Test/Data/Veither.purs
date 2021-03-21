@@ -143,7 +143,7 @@ spec = do
       Control.checkAlt prx2Veither
       Control.checkBind prx2Veither
       Control.checkMonad prx2Veither
-      -- Control.checkExtend prx2Veither
+      Control.checkExtend prx2Veither
 
 
 prxVeither = Proxy ∷ Proxy (Veither (foo :: A) B)
