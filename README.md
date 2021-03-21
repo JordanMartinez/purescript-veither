@@ -21,7 +21,7 @@ foo = do
 
 ## How? By hard-coding one of the rows in `Variant` to work like `Right` and leaving the others to work like `Left`
 
-[`Variant`](https://github.com/natefaubion/purescript-variant) is the extensible version of `Either`, but one cannot use it in a monadic way. So, what if you took `Variant` and provided a newtype around it that hard-coded one of the rows to something that functions like `Either`'s `Right` constructor (e.g. `("_" :: a)`) and then made it extensible, so that the other rows function like an extensible `Left` constructor (e.g. `("_" :: a | errorRows)`)? You get `Veither`, a `Variant`-based version of `Either`.
+[`Variant`](https://github.com/natefaubion/purescript-variant) is the extensible version of `Either`, but one cannot use it in a monadic way. So, what if you took `Variant` and provided a newtype around it that hard-coded one of the rows to something that functions like `Either`'s `Right` constructor (e.g. `("_" :: a)`) and then made it extensible, so that the other rows function like an extensible `Left` constructor (e.g. `("_" :: a | errorRows)`)? You get `Veither`, a `Variant`-based version of `Either`. The other benefit is that we no longer have multiple layers of nesting (e.g. `Either a (Either b (Either c ...))`).
 
 ```purescript
 newtype Veither errorRows a = Veither (Variant ("_" :: a | errorRows))
@@ -41,7 +41,7 @@ type PossibleErrors = (a :: ErrorType1, b :: ErrorType2)
 foo :: Veither PossibleErrors String
 foo = do
   a <- stringOrFailWithErrorType1
-  b <- stringOrFailWithErrorType2 -- uh-oh!
+  b <- stringOrFailWithErrorType2 -- not a problem!
   pure $ doSomethingWith a b
 
 main :: Effect Unit
