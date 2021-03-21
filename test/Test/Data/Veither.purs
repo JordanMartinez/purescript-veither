@@ -10,9 +10,12 @@ import Data.Veither (Veither(..), veither, vfromLeft, vfromLeft', vfromRight, vf
 import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Test.QuickCheck (quickCheckGen)
+import Test.QuickCheck.Laws (A, B, C, checkLaws)
+import Test.QuickCheck.Laws.Control as Control
+import Test.QuickCheck.Laws.Data as Data
 import Test.Spec (SpecT, describe, it)
 import Test.Spec.Assertions (shouldEqual)
-import Type.Proxy (Proxy(..))
+import Type.Proxy (Proxy(..), Proxy2(..))
 
 type X r = (x :: Int | r)
 type Y r = (y :: Int | r)
@@ -53,25 +56,6 @@ addOne val = val + 1
 
 spec :: forall m. MonadEffect m => SpecT Aff Unit m Unit
 spec = do
-  describe "type class instance tests" do
-    liftEffect $ quickCheckGen do
-      i <- chooseInt bottom top
-      e <- chooseInt bottom top
-      let
-        vi :: Veither (foo :: Int) Int
-        vi = pure i
-
-        ve :: Veither (foo :: Int) Int
-        ve = pure e
-
-      pure $ all identity
-        [ vi == vi
-        , ve == ve
-        , vi /= ve
-        , ve /= vi
-        , (compare i e) == (compare vi ve)
-        , (compare e i) == (compare ve vi)
-        ]
   describe "Standard functions" do
     it "veither works" do
       veither case_                    identity v0a `shouldEqual` a
@@ -145,3 +129,22 @@ spec = do
       vhush v2a `shouldEqual` Just a
       vhush v2x `shouldEqual` Nothing
       vhush v2y `shouldEqual` Nothing
+  
+  describe "type class instance tests" do
+    liftEffect $ checkLaws "Veither" do
+      Data.checkEq prxVeither
+      Data.checkOrd prxVeither
+      Data.checkBounded prxVeither
+      Data.checkFunctor prx2Veither
+      -- Data.checkFunctorWithIndex prx2Veither
+      -- Data.checkFoldableFunctor prx2Veither
+      Control.checkApply prx2Veither
+      Control.checkApplicative prx2Veither
+      Control.checkAlt prx2Veither
+      Control.checkBind prx2Veither
+      Control.checkMonad prx2Veither
+      -- Control.checkExtend prx2Veither
+
+
+prxVeither = Proxy ∷ Proxy (Veither (foo :: A) B)
+prx2Veither = Proxy2 ∷ Proxy2 (Veither (bar :: C))
