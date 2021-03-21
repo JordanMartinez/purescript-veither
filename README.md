@@ -59,40 +59,6 @@ main = do
       # on _b (const "error type 2 happened")
 ```
 
-## Any problems? Yes, `Apply` currently produces a runtime exception
-
-Current output of `spago test`:
-```bash
-Checking laws of Veither instances...
-
-Checking 'Reflexivity' law for Eq
-1000/1000 test(s) passed.
-Checking 'Symmetry' law for Eq
-1000/1000 test(s) passed.
-Checking 'Transitivity' law for Eq
-1000/1000 test(s) passed.
-Checking 'Negation' law for Eq
-1000/1000 test(s) passed.
-Checking 'Reflexivity' law for Ord
-1000/1000 test(s) passed.
-Checking 'Antisymmetry' law for Ord
-1000/1000 test(s) passed.
-Checking 'Transitivity' law for Ord
-1000/1000 test(s) passed.
-Checking 'Ordering' law for Bounded
-1000/1000 test(s) passed.
-Checking 'Identity' law for Functor
-1000/1000 test(s) passed.
-Checking 'Composition' law for Functor
-1000/1000 test(s) passed.
-Checking 'Associative composition' law for Apply
-/....../purescript-veither/output/Effect.Aff/foreign.js:532
-                throw util.fromLeft(step);
-                ^
-
-Error: Failed pattern match at Test.QuickCheck.Arbitrary (line 115, column 1 - line 118, column 34): Function
-```
-
 ## FAQs
 
 ### Why use "_" as the label of `a`?
