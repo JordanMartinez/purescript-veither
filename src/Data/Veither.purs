@@ -11,14 +11,14 @@ import Data.Functor.Invariant (class Invariant, imapF)
 import Data.List as L
 import Data.Maybe (Maybe(..), fromJust, maybe, maybe')
 import Data.Newtype (class Newtype)
-import Data.Symbol (class IsSymbol)
+import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Traversable (class Traversable)
 import Data.Variant (Variant, inj, on)
-import Data.Variant.Internal (VariantRep(..))
+import Data.Variant.Internal (VariantRep(..), impossible)
 import Partial.Unsafe (unsafePartial)
 import Prim.Row as Row
 import Prim.RowList as RL
-import Test.QuickCheck (class Arbitrary, arbitrary)
+import Test.QuickCheck (class Arbitrary, class Coarbitrary, arbitrary, coarbitrary)
 import Test.QuickCheck.Gen (Gen, elements)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -227,3 +227,34 @@ instance variantArbitrarysCons ∷ (
         pure v
     
     L.Cons va (variantArbitrarys (Proxy :: Proxy final) (Proxy ∷ Proxy rlTail))
+
+foreign import data UnknownVariantValue :: Type 
+
+instance coarbitraryVeither :: (
+  RL.RowToList ("_" :: a | errorRows) rl
+  ) => Coarbitrary (Veither errorRows a) where
+  coarbitrary :: forall r. Veither errorRows a -> Gen r -> Gen r
+  coarbitrary (Veither v) = case coerceV v of
+    VariantRep a -> variantCoarbitrarys (Proxy :: Proxy rl) a
+    where
+      coerceV ∷ Variant ("_" ∷ a | errorRows) → VariantRep UnknownVariantValue
+      coerceV = unsafeCoerce
+
+class VariantCoarbitrarys :: RL.RowList Type -> Constraint
+class VariantCoarbitrarys currentRL where
+  variantCoarbitrarys :: forall r. Proxy currentRL -> { type :: String, value :: UnknownVariantValue } -> (Gen r -> Gen r)
+
+instance variantCoarbitrarysNil :: VariantCoarbitrarys RL.Nil where
+  variantCoarbitrarys _ _ = impossible "coarbtirary"
+
+instance variantCoarbitrarysCons :: (
+  IsSymbol sym, 
+  Coarbitrary a, 
+  VariantCoarbitrarys tail) => VariantCoarbitrarys (RL.Cons sym a tail) where
+  variantCoarbitrarys _ a = 
+    if a.type == reflectSymbol (Proxy :: Proxy sym) 
+      then coarbitrary (coerceA a.value)
+      else variantCoarbitrarys (Proxy :: Proxy tail) a
+    where
+      coerceA ∷ UnknownVariantValue -> a
+      coerceA = unsafeCoerce
