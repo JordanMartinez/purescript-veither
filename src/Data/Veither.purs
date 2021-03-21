@@ -85,7 +85,8 @@ newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
 -- | Proxy type for `Veither`'s happy path (e.g.. `Either`'s `Right` constructor). 
--- | Note: the label "_" intentionally doesn't match the name of this value (i.e. '_veither').
+-- | 
+-- | Note: the label `"_"` intentionally doesn't match the name of this value (i.e. '_veither').
 _veither ∷ Proxy "_"
 _veither = Proxy
 
@@ -264,6 +265,7 @@ vfromRight default (Veither v) = case coerceV v of
   coerceV ∷ Variant ("_" ∷ a | errorRows) → VariantRep a
   coerceV = unsafeCoerce
 
+-- | Same as `vfromRight` but the default value is lazy.
 vfromRight' ∷ forall errorRows a. (Unit → a) → Veither errorRows a → a
 vfromRight' default (Veither v) = case coerceV v of
   VariantRep a | a.type == "_" → a.value
@@ -289,11 +291,12 @@ vfromLeft ∷ forall errorRows a b. b → (Variant errorRows → b) → Veither 
 vfromLeft default handleFailures (Veither v) =
   on _veither (const default) handleFailures v
 
+-- | Same as `vfromLeft` but the default value is lazy.
 vfromLeft' ∷ forall errorRows a b. (Unit → b) → (Variant errorRows → b) → Veither errorRows a → b
 vfromLeft' default handleFailures (Veither v) =
   on _veither (\_ → default unit) handleFailures v
 
--- | Convert a `Maybe` value into a `Veither` value using a default value when the `Maybe` value is `Nothing.
+-- | Convert a `Maybe` value into a `Veither` value using a default value when the `Maybe` value is `Nothing`.
 -- |
 -- | ```
 -- | mJust :: Maybe String
@@ -314,6 +317,7 @@ vnote ∷ forall otherErrorRows errorRows s a b
   => Proxy s → a → Maybe b → Veither errorRows b
 vnote proxy a may = Veither (maybe (inj proxy a) (\b → inj _veither b) may)
 
+-- | Same as `vnote` but the default value is lazy.
 vnote' ∷ forall otherErrorRows errorRows s a b
    . Row.Cons s a otherErrorRows ("_" ∷ b | errorRows)
   => IsSymbol s
