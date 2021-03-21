@@ -6,11 +6,13 @@ import Control.Alt (class Alt)
 import Control.Extend (class Extend)
 import Data.Array.NonEmpty as NEA
 import Data.Enum (class BoundedEnum, class Enum)
+import Data.Foldable (class Foldable)
 import Data.Functor.Invariant (class Invariant, imapF)
 import Data.List as L
 import Data.Maybe (Maybe(..), fromJust, maybe, maybe')
 import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol)
+import Data.Traversable (class Traversable)
 import Data.Variant (Variant, inj, on)
 import Data.Variant.Internal (VariantRep(..))
 import Partial.Unsafe (unsafePartial)
@@ -28,6 +30,24 @@ _veither ∷ Proxy "_"
 _veither = Proxy
 
 derive instance newtypeVeither ∷ Newtype (Veither errorRows a) _
+
+instance foldableVeither :: Foldable (Veither errorRows) where
+  foldr f z v = veither (const z) (\a -> f a z) v
+  foldl f z v = veither (const z) (\a -> f z a) v
+  foldMap f v = veither (const mempty) f v
+
+instance traversableVeither :: Traversable (Veither errorRows) where
+  traverse :: forall a b m. Applicative m => (a -> m b) -> Veither errorRows a -> m (Veither errorRows b)
+  traverse f v = veither (const (pure (coerceR v))) (\a -> pure <$> f a) v
+    where
+      coerceR ∷ forall a b. Veither errorRows a → Veither errorRows b
+      coerceR = unsafeCoerce
+  
+  sequence :: forall a m. Applicative m => Veither errorRows (m a) -> m (Veither errorRows a)
+  sequence v = veither (const (pure (coerceR v))) (\a -> pure <$> a) v
+    where
+      coerceR ∷ forall a b. Veither errorRows a → Veither errorRows b
+      coerceR = unsafeCoerce
 
 instance invariantVeither :: Invariant (Veither errorRows) where
   imap = imapF
@@ -49,7 +69,7 @@ instance applyVeither ∷ Apply (Veither errorRows) where
   apply ∷ forall a b. Veither errorRows (a → b) → Veither errorRows a → Veither errorRows b
   apply (Veither f) (Veither a) = Veither case coerceVF f, coerceVA a of
       VariantRep f', VariantRep a'
-        | f'.type == "_", a'.type == "_" →
+        | f'.type == "_" && a'.type == "_" →
           inj _veither (f'.value a'.value)
       _, _ → coerceR f
     where
