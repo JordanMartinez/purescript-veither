@@ -19,9 +19,29 @@ foo = do
   pure $ doSomethingWith a b
 ```
 
+One way around this is to use a nested `Either` type (e.g. [`Either3](https://pursuit.purescript.org/packages/purescript-either/5.0.0/docs/Data.Either.Nested#t:Either3)), but this comes at the cost of extra layers of "boxing:" 
+
+```purescript
+import Data.Either (Either(..))
+import Data.Either.Nested (Either5)
+import Data.Either.Inject (inj)
+
+-- Syntactic sugar to help here...
+foo :: Either5 a b c d e
+foo = inj d
+
+-- but it comes down to this
+bar :: Either a (Either b (Either c (Either d e)))
+bar = Right (Right (Right (Left d)))
+```
+
+One could reduce the amount of boxing by using [`Variant`](https://pursuit.purescript.org/packages/purescript-variant/7.0.1/docs/Data.Variant#t:Variant). However, `Variant` does not have a `Monad` instance, so one cannot use the "do notation" in the original example above. 
+
+This library enables one to use all the type classes of `Either` (except `Eq1` and `Ord1`, which haven't yet been implemented) but with the extensible error type capaility of `Variant`.
+
 ## How? By hard-coding one of the rows in `Variant` to work like `Right` and leaving the others to work like `Left`
 
-[`Variant`](https://github.com/natefaubion/purescript-variant) is the extensible version of `Either`, but one cannot use it in a monadic way. So, what if you took `Variant` and provided a newtype around it that hard-coded one of the rows to something that functions like `Either`'s `Right` constructor (e.g. `("_" :: a)`) and then made it extensible, so that the other rows function like an extensible `Left` constructor (e.g. `("_" :: a | errorRows)`)? You get `Veither`, a `Variant`-based version of `Either`. The other benefit is that we no longer have multiple layers of nesting (e.g. `Either a (Either b (Either c ...))`).
+What if you took `Variant` and provided a newtype around it that hard-coded one of the rows to something that functions like `Either`'s `Right` constructor (e.g. `("_" :: a)`) and then made it extensible, so that the other rows function like an extensible `Left` constructor (e.g. `("_" :: a | errorRows)`)? You get `Veither`, a `Variant`-based version of `Either`.
 
 ```purescript
 newtype Veither errorRows a = Veither (Variant ("_" :: a | errorRows))
