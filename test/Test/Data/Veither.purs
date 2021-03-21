@@ -2,9 +2,10 @@ module Test.Data.Veither where
 
 import Prelude
 
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Variant (Variant, case_, on, inj)
-import Data.Veither (Veither(..), veither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote')
+import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote')
 import Effect.Aff (Aff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Test.QuickCheck.Laws (A, B, C, checkLaws)
@@ -51,6 +52,12 @@ onXY doX doY =
 addOne :: Int -> Int
 addOne val = val + 1
 
+er :: Either Int Int
+er = Right 10
+
+el :: Either Int Int
+el = Left 20
+
 spec :: forall m. MonadEffect m => SpecT Aff Unit m Unit
 spec = do
   describe "Standard functions" do
@@ -61,6 +68,11 @@ spec = do
       veither (onXY identity identity) identity v2a `shouldEqual` a
       veither (onXY identity identity) identity v2x `shouldEqual` x
       veither (onXY identity identity) identity v2y `shouldEqual` y
+    it "vfromEither works" do
+      vfromEither _x er `shouldEqual` v1a
+      vfromEither _x el `shouldEqual` v1x
+      vfromEither _y er `shouldEqual` v2a
+      vfromEither _y el `shouldEqual` v2y
     it "fromRight works" do
       vfromRight 0 v0a `shouldEqual` a
 

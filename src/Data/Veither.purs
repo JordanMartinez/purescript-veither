@@ -5,6 +5,7 @@ import Prelude
 import Control.Alt (class Alt)
 import Control.Extend (class Extend)
 import Data.Array.NonEmpty as NEA
+import Data.Either (Either, either)
 import Data.Enum (class BoundedEnum, class Enum)
 import Data.Foldable (class Foldable)
 import Data.Functor.Invariant (class Invariant, imapF)
@@ -142,6 +143,12 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
 
   coerceR ∷ Variant ("_" ∷ a | errorRows) → Variant errorRows
   coerceR = unsafeCoerce
+
+vfromEither ∷ forall sym otherRows errorRows a b
+  .  IsSymbol sym 
+  => Row.Cons sym a otherRows ("_" :: b | errorRows) 
+  => Proxy sym -> Either a b -> Veither errorRows b
+vfromEither proxy = either (\e -> Veither (inj proxy e)) (\a -> Veither (inj _veither a))
 
 vfromRight ∷ forall errorRows a. a → Veither errorRows a → a
 vfromRight default (Veither v) = case coerceV v of
