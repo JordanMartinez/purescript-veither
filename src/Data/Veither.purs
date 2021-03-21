@@ -118,7 +118,7 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
   coerceR ∷ Variant ("_" ∷ a | errorRows) → Variant errorRows
   coerceR = unsafeCoerce
 
-vfromRight ∷ forall errorRows a b. a → Veither errorRows a → a
+vfromRight ∷ forall errorRows a. a → Veither errorRows a → a
 vfromRight default (Veither v) = case coerceV v of
   VariantRep a | a.type == "_" → a.value
   _ → default
