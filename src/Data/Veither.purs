@@ -9,6 +9,7 @@ import Data.Either (Either, either)
 import Data.Enum (class BoundedEnum, class Enum)
 import Data.Foldable (class Foldable)
 import Data.Functor.Invariant (class Invariant, imapF)
+import Data.FunctorWithIndex (class FunctorWithIndex)
 import Data.List as L
 import Data.Maybe (Maybe(..), fromJust, maybe, maybe')
 import Data.Newtype (class Newtype)
@@ -125,6 +126,9 @@ instance functorVeither ∷ Functor (Veither errorRows) where
 
     coerceR ∷ forall a b. Variant ("_" ∷ a | errorRows) → Variant ("_" ∷ b | errorRows)
     coerceR = unsafeCoerce
+
+instance functorWithIndexVeither ∷ FunctorWithIndex Unit (Veither errorRows) where
+  mapWithIndex f = map $ f unit
 
 instance applyVeither ∷ Apply (Veither errorRows) where
   apply ∷ forall a b. Veither errorRows (a → b) → Veither errorRows a → Veither errorRows b
