@@ -6,12 +6,11 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Variant (Variant, case_, on, inj)
 import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote', vsafe)
-import Effect.Aff (Aff)
-import Effect.Class (class MonadEffect, liftEffect)
+import Effect (Effect)
 import Test.QuickCheck.Laws (A, B, C, checkLaws)
 import Test.QuickCheck.Laws.Control as Control
 import Test.QuickCheck.Laws.Data as Data
-import Test.Spec (SpecT, describe, it)
+import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Type.Proxy (Proxy(..), Proxy2(..))
 
@@ -52,13 +51,16 @@ onXY doX doY =
 addOne :: Int -> Int
 addOne val = val + 1
 
-er :: Either Int Int
-er = Right 10
+er10 :: Either Int Int
+er10 = Right 10
 
-el :: Either Int Int
-el = Left 20
+el20 :: Either Int Int
+el20 = Left 20
 
-spec :: forall m. MonadEffect m => SpecT Aff Unit m Unit
+el30 :: Either Int Int
+el30 = Left 30
+
+spec :: Spec Unit
 spec = do
   describe "Standard functions" do
     it "veither works" do
@@ -71,10 +73,10 @@ spec = do
     it "vsafe works" do
       vsafe (pure 1) `shouldEqual` 1
     it "vfromEither works" do
-      vfromEither _x er `shouldEqual` v1a
-      vfromEither _x el `shouldEqual` v1x
-      vfromEither _y er `shouldEqual` v2a
-      vfromEither _y el `shouldEqual` v2y
+      vfromEither _x er10 `shouldEqual` v1a
+      vfromEither _x el20 `shouldEqual` v1x
+      vfromEither _y er10 `shouldEqual` v2a
+      vfromEither _y el30 `shouldEqual` v2y
     it "fromRight works" do
       vfromRight 0 v0a `shouldEqual` a
 
@@ -140,22 +142,22 @@ spec = do
       vhush v2a `shouldEqual` Just a
       vhush v2x `shouldEqual` Nothing
       vhush v2y `shouldEqual` Nothing
-  
-  describe "type class instance tests" do
-    liftEffect $ checkLaws "Veither" do
-      Data.checkEq prxVeither
-      Data.checkOrd prxVeither
-      Data.checkBounded prxVeither
-      Data.checkFunctor prx2Veither
-      -- Data.checkFunctorWithIndex prx2Veither
-      Data.checkFoldableFunctor prx2Veither
-      Control.checkApply prx2Veither
-      Control.checkApplicative prx2Veither
-      Control.checkAlt prx2Veither
-      Control.checkBind prx2Veither
-      Control.checkMonad prx2Veither
-      Control.checkExtend prx2Veither
 
+checkVeitherTypeClassLaws :: Effect Unit
+checkVeitherTypeClassLaws = do
+  checkLaws "Veither" do
+    Data.checkEq prxVeither
+    Data.checkOrd prxVeither
+    Data.checkBounded prxVeither
+    Data.checkFunctor prx2Veither
+    -- Data.checkFunctorWithIndex prx2Veither
+    Data.checkFoldableFunctor prx2Veither
+    Control.checkApply prx2Veither
+    Control.checkApplicative prx2Veither
+    Control.checkAlt prx2Veither
+    Control.checkBind prx2Veither
+    Control.checkMonad prx2Veither
+    Control.checkExtend prx2Veither
 
 prxVeither = Proxy ∷ Proxy (Veither (foo :: A) B)
 prx2Veither = Proxy2 ∷ Proxy2 (Veither (bar :: C))
