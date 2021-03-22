@@ -233,6 +233,44 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
 vsafe ∷ forall a. Veither () a → a
 vsafe (Veither v) = on _veither identity case_ v
 
+-- | Removes one of the possible error types in the `Veither` by converting its value 
+-- | to a value of type `a`, the 'happy path' type. This can be useful for gradually 
+-- | picking off some of the errors the `Veither` value could have by handling only
+-- | some of them at a given point in your code.
+-- |
+-- | If the number of errors in your `Veither` are small and can all be handled via `vhandle`, 
+-- | one can use `vsafe` to extract the value of the 'happy path' `a` type.
+-- |
+-- | ```
+-- | foo :: Veither (b :: Int) String
+-- | foo = pure "2"
+-- |
+-- | _b :: Proxy "b"
+-- | _b = Proxy
+-- |
+-- | bar :: Veither (b :: Int) String
+-- | bar = Veither (inj_ _b 3)
+-- |
+-- | vhandle _b show bar == ((pure "3") :: Veither () String)
+-- | vhandle _b show foo == ((pure "2") :: Veither () String)
+-- |
+-- | safe (vhandle _b show bar) == "3"
+-- | safe (vhandle _b show foo) == "2"
+-- | ````
+vhandle ∷ forall sym b otherErrorRows errorRows a
+  .  IsSymbol sym
+  => Row.Cons sym b otherErrorRows errorRows
+  => Proxy sym -> (b -> a) -> Veither errorRows a → Veither otherErrorRows a
+vhandle proxy f variant@(Veither v) = case coerceV v of
+  VariantRep b | b.type == reflectSymbol proxy → pure $ f b.value
+  _ → coerceVeither variant
+  where
+  coerceV ∷ Variant ("_" ∷ a | errorRows) → VariantRep b
+  coerceV = unsafeCoerce
+
+  coerceVeither ∷ Veither errorRows a → Veither otherErrorRows a
+  coerceVeither = unsafeCoerce
+
 -- | Convert an `Either` into a `Veither`.
 -- |
 -- | ```

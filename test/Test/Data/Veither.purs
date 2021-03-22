@@ -5,7 +5,7 @@ import Prelude
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Variant (Variant, case_, on, inj)
-import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhush, vnote, vnote', vsafe)
+import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhandle, vhush, vnote, vnote', vsafe)
 import Effect (Effect)
 import Test.QuickCheck.Laws (A, B, C, checkLaws)
 import Test.QuickCheck.Laws.Control as Control
@@ -29,6 +29,10 @@ x = 20 :: Int
 y = 30 :: Int
 
 v0a =             pure a :: Veither E0 Int
+
+-- these are only used in the `vhandle` test
+v0x =             pure x :: Veither E0 Int
+v0y =             pure y :: Veither E0 Int
 
 v1a =             pure a :: Veither E1 Int
 v1x = Veither $ inj _x x :: Veither E1 Int
@@ -72,6 +76,17 @@ spec = do
       veither (onXY identity identity) identity v2y `shouldEqual` y
     it "vsafe works" do
       vsafe (pure 1) `shouldEqual` 1
+    it "vhandle works" do
+      vhandle _x identity v1a `shouldEqual` v0a
+      vhandle _x identity v1x `shouldEqual` v0x
+
+      vhandle _y identity (vhandle _x identity v2a) `shouldEqual` v0a
+      vhandle _y identity (vhandle _x identity v2x) `shouldEqual` v0x
+      vhandle _y identity (vhandle _x identity v2y) `shouldEqual` v0y
+
+      vhandle _x identity (vhandle _y identity v2a) `shouldEqual` v0a
+      vhandle _x identity (vhandle _y identity v2x) `shouldEqual` v0x
+      vhandle _x identity (vhandle _y identity v2y) `shouldEqual` v0y
     it "vfromEither works" do
       vfromEither _x er10 `shouldEqual` v1a
       vfromEither _x el20 `shouldEqual` v1x
