@@ -25,7 +25,11 @@ import Test.QuickCheck.Gen (Gen, elements)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
--- | `Veither` is the same as `Either` except that the `l` type can be zero to many different types.
+-- | `Veither` is the same as `Either` except that the `l` type can be zero to many different types. 
+-- | `Veither` has all the instances that `Either` has, except for `Eq1` and `Ord1`, which simply 
+-- | haven't been implemented yet. If you would use a function from `Data.Either` (e.g. hush) and
+-- | you want to use the equivalent for `Veither`, add a `v` in front of it (e.g. `vhush`).
+-- |
 -- | Conceptually, `Veither` has the following definition:
 -- |
 -- | ```
@@ -38,7 +42,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | ```
 -- |
 -- | `Veither` is monadic via the `a` type parameter. For example, the `Int` type below
--- | represents the 'happy' path and any other errors will shortcircuit the computation:
+-- | represents the 'happy path' and any other errors will short-circuit the computation:
 -- |
 -- | ```
 -- | foo :: Variant (e1 :: Error1, e2 :: Error2) Int
@@ -48,10 +52,12 @@ import Unsafe.Coerce (unsafeCoerce)
 -- |   pure $ i1 + i2
 -- | ````
 -- | 
--- | Creating a value of `Veither` can be done in one of two ways:
--- |  - using `pure`: `pure 4 :: forall errorRows. Veither errorRows Int`
--- |  - using `inj`: `(Veither (inj (Proxy :: Proxy "foo") String)) :: forall a. Veither (foo :: String) a`
--- | 
+-- | Creating a value of `Veither` can be done in one of two ways, depending on whether 
+-- | you want the resulting `Veither` to function like `Either`'s `Right` constructor or like
+-- | `Either`'s `Left` constructor:
+-- |  - `Either`'s `Right` constructor: use `pure`. For example, `pure 4 :: forall errorRows. Veither errorRows Int`
+-- |  - `Either`'s `Left` constructor: use `Data.Variant.inj`. For example,  `Veither (inj (Proxy :: Proxy "foo") String)) :: forall a. Veither (foo :: String) a`
+-- |
 -- | One can also change an `Either a b` into a `Veither (x :: a) b` using `vfromEither`.
 -- | 
 -- | To consume a `Veither` value, use `veither`, `vfromRight`, `vfromLeft`, `vnote`, or `vhush`. For example,
@@ -80,8 +86,10 @@ import Unsafe.Coerce (unsafeCoerce)
 -- |   handleSuccess = show
 -- | ```
 -- | 
--- | `Veither` has all the instances that `Either` has, except for `Eq1` and `Ord1`, 
--- | which simply haven't been implemented yet.
+-- | Below are functions that exist in `Veither` but do not exist in `Either`:
+-- | - `vsafe` (inspired by `purescript-checked-exceptions`'s `safe` function)
+-- | - `vhandle`
+-- | - `vfromEither`
 newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
