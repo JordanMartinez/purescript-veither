@@ -55,13 +55,13 @@ import Unsafe.Coerce (unsafeCoerce)
 -- |   i1 <- returnIntOrFailWithError1
 -- |   i2 <- returnIntOrFailWithError2
 -- |   pure $ i1 + i2
--- | ````
+-- | ```
 -- | 
 -- | Creating a value of `Veither` can be done in one of two ways, depending on whether 
 -- | you want the resulting `Veither` to function like `Either`'s `Right` constructor or like
 -- | `Either`'s `Left` constructor:
 -- |  - `Either`'s `Right` constructor: use `pure`. For example, `pure 4 :: forall errorRows. Veither errorRows Int`
--- |  - `Either`'s `Left` constructor: use `Data.Variant.inj`. For example,  `Veither (inj (Proxy :: Proxy "foo") String)) :: forall a. Veither (foo :: String) a`
+-- |  - `Either`'s `Left` constructor: use `Data.Variant.inj`. For example, `Veither (inj (Proxy :: Proxy "foo") String)) :: forall a. Veither (foo :: String) a`
 -- |
 -- | One can also change an `Either a b` into a `Veither (x :: a) b` using `vfromEither`.
 -- | 
@@ -97,6 +97,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | - `vfromEither`
 -- | - `genVeitherUniform` - same as `genEither` but with uniform probability
 -- | - `genVeitherFrequency` - same as `genEither` but with user-specified probability
+-- |
 newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
