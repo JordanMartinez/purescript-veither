@@ -29,13 +29,13 @@
   ],
   "dependencies": {
     "purescript-control": "v5.0.0",
-    "purescrpit-enums": "v5.0.0",
-    "purescrpit-maybe": "v5.0.0",
-    "purescrpit-quickcheck": "v7.0.0",
-    "purescrpit-quickcheck-laws": "v6.0.0",
-    "purescrpit-spec": "v5.0.0",
-    "purescrpit-transformers": "v5.0.0",
-    "purescrpit-variant": "v7.0.2"
+    "purescript-enums": "v5.0.0",
+    "purescript-maybe": "v5.0.0",
+    "purescript-quickcheck": "v7.0.0",
+    "purescript-quickcheck-laws": "v6.0.0",
+    "purescript-spec": "v5.0.0",
+    "purescript-transformers": "v5.0.0",
+    "purescript-variant": "v7.0.2"
   },
   "devDependencies": {
     "purescript-psci-support": "v5.0.0"
