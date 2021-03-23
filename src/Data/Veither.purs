@@ -389,14 +389,24 @@ vhush = veither (const Nothing) Just
 -- | generators' labels correspond to the `Veither`'s labels
 -- |
 -- | ```
+-- | -- Note: type annotations are needed! Otherwise, you'll get compiler errors.
 -- | quickCheckGen do
 -- |   v <- genVeitherUniform
--- |      -- type annotations are needed; otherwise, you'll get compiler errors!
+-- |      -- first approach: annotate inline
 -- |      { "_": genHappyPath :: Gen Int
 -- |      , x: genXValues :: Gen (Maybe String)
 -- |      , y: pure "foo" :: Gen String
 -- |      }
--- | ````
+-- |   -- rest of test...
+-- |
+-- | quickCheckGen do
+-- |   let
+-- |     -- second approach: use a let with annotations before usage
+-- |     r :: { "_" :: Gen Int, x :: Gen (Maybe String), y :: Gen String }
+-- |     r = { "_": genHappyPath, x: genXValues, y: pure "foo" }
+-- |   v <- genVeitherUniform r
+-- |   -- rest of test...
+-- | ```
 genVeitherUniform :: forall a errorRows otherGenRows rowList
   -- 2. Calculate what the rowList is
   .  RL.RowToList ("_" :: Gen a | otherGenRows) rowList
@@ -423,14 +433,24 @@ genVeitherUniform rec = do
 -- | generators' labels correspond to the `Veither`'s labels
 -- |
 -- | ```
+-- | -- Note: type annotations are needed! Otherwise, you'll get compiler errors.
 -- | quickCheckGen do
--- |   v <- genVeitherUniform
--- |      -- type annotations are needed; otherwise, you'll get compiler errors!
--- |      { "_": Tuple 1.0 $ genHappyPath :: Gen Int
--- |      , x: Tuple 2.0 $ genXValues :: Gen (Maybe String)
--- |      , y: Tuple 0.0 $ pure "foo" :: Gen String
+-- |   v <- genVeitherFrequency
+-- |      -- first approach: annotate inline
+-- |      { "_": genHappyPath :: Gen Int
+-- |      , x: genXValues :: Gen (Maybe String)
+-- |      , y: pure "foo" :: Gen String
 -- |      }
--- | ````
+-- |   -- rest of test...
+-- |
+-- | quickCheckGen do
+-- |   let
+-- |     -- second approach: use a let with annotations before usage
+-- |     r :: { "_" :: Gen Int, x :: Gen (Maybe String), y :: Gen String }
+-- |     r = { "_": genHappyPath, x: genXValues, y: pure "foo" }
+-- |   v <- genVeitherFrequency r
+-- |   -- rest of test...
+-- | ```
 genVeitherFrequncy :: forall a errorRows otherGenRows rowList
   -- 2. Calculate what the rowList is
   .  RL.RowToList ("_" :: Tuple Number (Gen a) | otherGenRows) rowList

@@ -185,11 +185,12 @@ checkGenerators :: Effect Unit
 checkGenerators = do
   log "Checking genVeitherUniform"
   quickCheckGen do
-    v <- genVeitherUniform 
-      { "_": pure 10 :: Gen Int
-      , x: pure 20 :: Gen Int
-      , y: pure 30  :: Gen Int
-      }
+    let
+      -- compare this style of annotating the record
+      -- with the approach used in the below `genVeitherFrequency` test
+      r :: { "_" :: Gen Int, x :: Gen Int, y :: Gen Int }
+      r = { "_": pure 10, x: pure 20, y: pure 30 }
+    v <- genVeitherUniform r
     let result = vsafe (vhandle _x identity (vhandle _y identity v))
     pure case result of
       10 -> true
@@ -200,6 +201,8 @@ checkGenerators = do
   log "Checking genVeitherFrequency"
   quickCheckGen do
     v <- genVeitherFrequncy 
+      -- the below style shows what we need to do if we don't
+      -- define a record like `r` in the `genVeitherUniform` example
       { "_": Tuple 1.0 $ pure 10 :: Tuple Number (Gen Int)
       , x: Tuple 2.0 $ pure 20 :: Tuple Number (Gen Int)
       , y: Tuple 0.0 $ pure 30 :: Tuple Number (Gen Int)
