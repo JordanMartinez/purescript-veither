@@ -383,6 +383,78 @@ vnote' proxy f may = Veither (maybe' (inj proxy <<< f) (\b → inj _veither b) m
 vhush ∷ forall errorRows a. Veither errorRows a → Maybe a
 vhush = veither (const Nothing) Just
 
+-- | Generate `Veither` with uniform probability given a record whose
+-- | generators' labels correspond to the `Veither`'s labels
+-- |
+-- | ```
+-- | quickCheckGen do
+-- |   v <- genVeitherUniform
+-- |      -- type annotations are needed; otherwise, you'll get compiler errors!
+-- |      { "_": genHappyPath :: Gen Int
+-- |      , x: genXValues :: Gen (Maybe String)
+-- |      , y: pure "foo" :: Gen String
+-- |      }
+-- | ````
+genVeitherUniform :: forall a errorRows otherGenRows rowList
+  -- 2. Calculate what the rowList is
+  .  RL.RowToList ("_" :: Gen a | otherGenRows) rowList
+  -- 3. Pass all this information into the type class instance,
+  => GenVariantUniform ("_" :: Gen a | otherGenRows) rowList ("_" :: a | errorRows)
+  -- 1. Given a record that has a generator for every value in the row
+  => Record ("_" :: Gen a | otherGenRows) 
+  -> Gen (Veither errorRows a)
+genVeitherUniform rec = do
+  let
+    -- 4. Use the type class to create the list of generators
+    vaList :: L.List (Gen (Variant ("_" :: a | errorRows)))
+    vaList = mkUniformList rec (Proxy :: Proxy rowList)
+  
+    -- 5. This is guaranteed to be non-empty because there will always be a ("_" :: a) row
+    vaNEA :: NonEmptyArray (Gen (Variant ("_" :: a | errorRows)))
+    vaNEA = unsafePartial $ fromJust $ NEA.fromFoldable vaList
+
+  -- 6. Choose one of the rows' generators and use it to generate a `Variant` whose rows fit the `Veither` rows
+  randomVariant <- oneOf vaNEA
+  pure $ Veither randomVariant
+
+-- | Generate `Veither` with user-specified probability given a record whose
+-- | generators' labels correspond to the `Veither`'s labels
+-- |
+-- | ```
+-- | quickCheckGen do
+-- |   v <- genVeitherUniform
+-- |      -- type annotations are needed; otherwise, you'll get compiler errors!
+-- |      { "_": Tuple 1.0 $ genHappyPath :: Gen Int
+-- |      , x: Tuple 2.0 $ genXValues :: Gen (Maybe String)
+-- |      , y: Tuple 0.0 $ pure "foo" :: Gen String
+-- |      }
+-- | ````
+genVeitherFrequncy :: forall a errorRows otherGenRows rowList
+  -- 2. Calculate what the rowList is
+  .  RL.RowToList ("_" :: Tuple Number (Gen a) | otherGenRows) rowList
+  -- 3. Pass all this information into the type class instance,
+  => GenVariantFrequency ("_" :: Tuple Number (Gen a) | otherGenRows) Number rowList ("_" :: a | errorRows)
+--   1. Given a record whose labels match the labels in the `Veither`'s underlying `Variant`
+--       and the corresponding type of the label stores two pieces of information:
+--         a. an number that indicates how frequently a label's generator should be used used, and
+--         b. the generator for the label's type
+  => Record ("_" :: Tuple Number (Gen a) | otherGenRows) 
+  -> Gen (Veither errorRows a)
+genVeitherFrequncy rec = do
+  let
+    -- 4. Use the type class to create the list of generators
+    vaList :: L.List (Tuple Number (Gen (Variant ("_" :: a | errorRows))))
+    vaList = mkFrequencyList rec (Proxy :: Proxy rowList)
+
+    -- 5. Make the list nonempty, which is guaranteed to be safe because there will always be a ("_" :: a) row
+    vaNEL :: LT.NonEmptyList (Tuple Number (Gen (Variant ("_" :: a | errorRows))))
+    vaNEL = unsafePartial $ fromJust $ NEL.fromList vaList
+
+  -- 6. Use the function to determine how frequently a given label's generator should be used
+  --     and use that generator to make a random variant whose rows fit the `Veither` rows
+  randomVariant <- frequency vaNEL
+  pure $ Veither randomVariant
+
 instance arbitraryVeither :: (
   RL.RowToList ("_" :: a | errorRows) rowList,
   VariantArbitrarys ("_" :: a | errorRows) rowList
@@ -459,78 +531,6 @@ instance variantCoarbitrarysCons :: (
     where
       coerceA ∷ UnknownVariantValue -> a
       coerceA = unsafeCoerce
-
--- | Generate `Veither` with uniform probability given a record whose
--- | generators' labels correspond to the `Veither`'s labels
--- |
--- | ```
--- | quickCheckGen do
--- |   v <- genVeitherUniform
--- |      -- type annotations are needed; otherwise, you'll get compiler errors!
--- |      { "_": genHappyPath :: Gen Int
--- |      , x: genXValues :: Gen (Maybe String)
--- |      , y: pure "foo" :: Gen String
--- |      }
--- | ````
-genVeitherUniform :: forall a errorRows otherGenRows rowList
-  -- 2. Calculate what the rowList is
-  .  RL.RowToList ("_" :: Gen a | otherGenRows) rowList
-  -- 3. Pass all this information into the type class instance,
-  => GenVariantUniform ("_" :: Gen a | otherGenRows) rowList ("_" :: a | errorRows)
-  -- 1. Given a record that has a generator for every value in the row
-  => Record ("_" :: Gen a | otherGenRows) 
-  -> Gen (Veither errorRows a)
-genVeitherUniform rec = do
-  let
-    -- 4. Use the type class to create the list of generators
-    vaList :: L.List (Gen (Variant ("_" :: a | errorRows)))
-    vaList = mkUniformList rec (Proxy :: Proxy rowList)
-  
-    -- 5. This is guaranteed to be non-empty because there will always be a ("_" :: a) row
-    vaNEA :: NonEmptyArray (Gen (Variant ("_" :: a | errorRows)))
-    vaNEA = unsafePartial $ fromJust $ NEA.fromFoldable vaList
-
-  -- 6. Choose one of the rows' generators and use it to generate a `Variant` whose rows fit the `Veither` rows
-  randomVariant <- oneOf vaNEA
-  pure $ Veither randomVariant
-
--- | Generate `Veither` with user-specified probability given a record whose
--- | generators' labels correspond to the `Veither`'s labels
--- |
--- | ```
--- | quickCheckGen do
--- |   v <- genVeitherUniform
--- |      -- type annotations are needed; otherwise, you'll get compiler errors!
--- |      { "_": Tuple 1.0 $ genHappyPath :: Gen Int
--- |      , x: Tuple 2.0 $ genXValues :: Gen (Maybe String)
--- |      , y: Tuple 0.0 $ pure "foo" :: Gen String
--- |      }
--- | ````
-genVeitherFrequncy :: forall a errorRows otherGenRows rowList
-  -- 2. Calculate what the rowList is
-  .  RL.RowToList ("_" :: Tuple Number (Gen a) | otherGenRows) rowList
-  -- 3. Pass all this information into the type class instance,
-  => GenVariantFrequency ("_" :: Tuple Number (Gen a) | otherGenRows) Number rowList ("_" :: a | errorRows)
---   1. Given a record whose labels match the labels in the `Veither`'s underlying `Variant`
---       and the corresponding type of the label stores two pieces of information:
---         a. an number that indicates how frequently a label's generator should be used used, and
---         b. the generator for the label's type
-  => Record ("_" :: Tuple Number (Gen a) | otherGenRows) 
-  -> Gen (Veither errorRows a)
-genVeitherFrequncy rec = do
-  let
-    -- 4. Use the type class to create the list of generators
-    vaList :: L.List (Tuple Number (Gen (Variant ("_" :: a | errorRows))))
-    vaList = mkFrequencyList rec (Proxy :: Proxy rowList)
-
-    -- 5. Make the list nonempty, which is guaranteed to be safe because there will always be a ("_" :: a) row
-    vaNEL :: LT.NonEmptyList (Tuple Number (Gen (Variant ("_" :: a | errorRows))))
-    vaNEL = unsafePartial $ fromJust $ NEL.fromList vaList
-
-  -- 6. Use the function to determine how frequently a given label's generator should be used
-  --     and use that generator to make a random variant whose rows fit the `Veither` rows
-  randomVariant <- frequency vaNEL
-  pure $ Veither randomVariant
 
 class GenVariantUniform :: Row Type -> RL.RowList Type -> Row Type -> Constraint
 class GenVariantUniform recordRows rl variantRows | recordRows -> variantRows where
