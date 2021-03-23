@@ -100,7 +100,7 @@ import Unsafe.Coerce (unsafeCoerce)
 newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
--- | Proxy type for `Veither`'s happy path (e.g.. `Either`'s `Right` constructor). 
+-- | Proxy type for `Veither`'s happy path (e.g. `Either`'s `Right` constructor). 
 -- | 
 -- | Note: the label `"_"` intentionally doesn't match the name of this value (i.e. '_veither').
 _veither ∷ Proxy "_"
