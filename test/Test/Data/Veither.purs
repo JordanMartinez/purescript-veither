@@ -4,9 +4,13 @@ import Prelude
 
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
 import Data.Variant (Variant, case_, on, inj)
-import Data.Veither (Veither(..), veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhandle, vhush, vnote, vnote', vsafe)
+import Data.Veither (Veither(..), genVeitherFrequncy, genVeitherUniform, veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhandle, vhush, vnote, vnote', vsafe)
 import Effect (Effect)
+import Effect.Console (log)
+import Test.QuickCheck (quickCheckGen)
+import Test.QuickCheck.Gen (Gen)
 import Test.QuickCheck.Laws (A, B, C, checkLaws)
 import Test.QuickCheck.Laws.Control as Control
 import Test.QuickCheck.Laws.Data as Data
@@ -156,7 +160,7 @@ spec = do
 
       vhush v2a `shouldEqual` Just a
       vhush v2x `shouldEqual` Nothing
-      vhush v2y `shouldEqual` Nothing
+      vhush v2y `shouldEqual` Nothing      
 
 checkVeitherTypeClassLaws :: Effect Unit
 checkVeitherTypeClassLaws = do
@@ -176,3 +180,33 @@ checkVeitherTypeClassLaws = do
 
 prxVeither = Proxy ∷ Proxy (Veither (foo :: A) B)
 prx2Veither = Proxy2 ∷ Proxy2 (Veither (bar :: C))
+
+checkGenerators :: Effect Unit
+checkGenerators = do
+  log "Checking genVeitherUniform"
+  quickCheckGen do
+    v <- genVeitherUniform 
+      { "_": pure 10 :: Gen Int
+      , x: pure 20 :: Gen Int
+      , y: pure 30  :: Gen Int
+      }
+    let result = vsafe (vhandle _x identity (vhandle _y identity v))
+    pure case result of
+      10 -> true
+      20 -> true
+      30 -> true
+      _ -> false
+
+  log "Checking genVeitherFrequency"
+  quickCheckGen do
+    v <- genVeitherFrequncy 
+      { "_": Tuple 1.0 $ pure 10 :: Tuple Number (Gen Int)
+      , x: Tuple 2.0 $ pure 20 :: Tuple Number (Gen Int)
+      , y: Tuple 0.0 $ pure 30 :: Tuple Number (Gen Int)
+      }
+    let result = vsafe (vhandle _x identity (vhandle _y identity v))
+    pure case result of
+      10 -> true
+      20 -> true
+      30 -> false -- generator should never run
+      _ -> false

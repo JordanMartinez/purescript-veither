@@ -11,5 +11,6 @@ import Test.Spec.Runner (runSpec)
 main :: Effect Unit
 main = do
   V.checkVeitherTypeClassLaws
+  V.checkGenerators
   launchAff_ $ runSpec [ consoleReporter ] do
     V.spec
