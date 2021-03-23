@@ -95,6 +95,8 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | - `vsafe` (inspired by `purescript-checked-exceptions`'s `safe` function)
 -- | - `vhandle`
 -- | - `vfromEither`
+-- | - `genVeitherUniform` - same as `genEither` but with uniform probability
+-- | - `genVeitherFrequency` - same as `genEither` but with user-specified probability
 newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
