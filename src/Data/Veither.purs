@@ -21,7 +21,7 @@ import Partial.Unsafe (unsafePartial)
 import Prim.Row as Row
 import Prim.RowList as RL
 import Test.QuickCheck (class Arbitrary, class Coarbitrary, arbitrary, coarbitrary)
-import Test.QuickCheck.Gen (Gen, elements)
+import Test.QuickCheck.Gen (Gen, oneOf)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -391,10 +391,9 @@ instance arbitraryVeither :: (
       -- This is guaranteed to be non-empty because there will always be a ("_" :: a) row
       vaNEA = unsafePartial $ fromJust $ NEA.fromFoldable vaList
 
-    -- Choose one of the rows' generators
-    variantGenerator <- elements vaNEA
-    -- use it to generate a Variant whose rows fit the Veither rows
-    randomVariant <- variantGenerator
+    -- Choose one of the rows' generators and use it to generate a
+    -- `Variant` whose rows fit the `Veither` rows
+    randomVariant <- oneOf vaNEA
     pure $ Veither randomVariant
 
 -- | Creates a list where each generator within the list will produce a Variant
