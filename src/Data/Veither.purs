@@ -30,15 +30,15 @@ import Test.QuickCheck.Gen (Gen, oneOf, frequency)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
--- | `Veither` is the same as `Either` except that the `l` type can be zero to many different types. 
--- | `Veither` has all the instances that `Either` has, except for `Eq1` and `Ord1`, which simply 
+-- | `Veither` is the same as `Either` except that the `l` type can be zero to many different types.
+-- | `Veither` has all the instances that `Either` has, except for `Eq1` and `Ord1`, which simply
 -- | haven't been implemented yet. If you would use a function from `Data.Either` (e.g. hush) and
 -- | you want to use the equivalent for `Veither`, add a `v` in front of it (e.g. `vhush`).
 -- |
 -- | Conceptually, `Veither` has the following definition:
 -- |
 -- | ```
--- | data Veither l1 l2 ... ln a 
+-- | data Veither l1 l2 ... ln a
 -- |   = Right a
 -- |   | L1 l1
 -- |   | L2 l2
@@ -56,41 +56,41 @@ import Unsafe.Coerce (unsafeCoerce)
 -- |   i2 <- returnIntOrFailWithError2
 -- |   pure $ i1 + i2
 -- | ```
--- | 
--- | Creating a value of `Veither` can be done in one of two ways, depending on whether 
+-- |
+-- | Creating a value of `Veither` can be done in one of two ways, depending on whether
 -- | you want the resulting `Veither` to function like `Either`'s `Right` constructor or like
 -- | `Either`'s `Left` constructor:
 -- |  - `Either`'s `Right` constructor: use `pure`. For example, `pure 4 :: forall errorRows. Veither errorRows Int`
 -- |  - `Either`'s `Left` constructor: use `Data.Variant.inj`. For example, `Veither (inj (Proxy :: Proxy "foo") String)) :: forall a. Veither (foo :: String) a`
 -- |
 -- | One can also change an `Either a b` into a `Veither (x :: a) b` using `vfromEither`.
--- | 
+-- |
 -- | To consume a `Veither` value, use `veither`, `vfromRight`, `vfromLeft`, `vnote`, or `vhush`. For example,
 -- | one might do the following using `veither`:
--- | 
+-- |
 -- | ```
 -- | import Type.Proxy (Proxy(..))
 -- | import Data.Variant (case_, on, inj)
--- | 
+-- |
 -- | -- Given a variant value...
 -- | val :: Veither (a :: Int, b :: String, c :: Boolean) Number
 -- | val = pure 5
--- | 
+-- |
 -- | -- you consume it using the following pattern. You'll need to handle every possible error type
 -- | consume :: Veither (a :: Int, b :: String, c :: Boolean) Number -> String
 -- | consume v = veither handleError handleSuccess v
 -- |   where
 -- |   handleError :: Variant (a :: Int, b :: String, c :: Boolean)
--- |   handleError = 
+-- |   handleError =
 -- |     case_
 -- |       # on (Proxy :: Proxy "a") show
 -- |       # on (Proxy :: Proxy "b") show
 -- |       # on (Proxy :: Proxy "c") show
--- | 
+-- |
 -- |   handleSuccess :: Number -> String
 -- |   handleSuccess = show
 -- | ```
--- | 
+-- |
 -- | Below are functions that exist in `Veither` but do not exist in `Either`:
 -- | - `vsafe` (inspired by `purescript-checked-exceptions`'s `safe` function)
 -- | - `vhandle`
@@ -102,8 +102,8 @@ import Unsafe.Coerce (unsafeCoerce)
 newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
--- | Proxy type for `Veither`'s happy path (e.g. `Either`'s `Right` constructor). 
--- | 
+-- | Proxy type for `Veither`'s happy path (e.g. `Either`'s `Right` constructor).
+-- |
 -- | Note: the label `"_"` intentionally doesn't match the name of this value (i.e. '_veither').
 _veither ∷ Proxy "_"
 _veither = Proxy
@@ -121,7 +121,7 @@ instance traversableVeither :: Traversable (Veither errorRows) where
     where
       coerceR ∷ forall a b. Veither errorRows a → Veither errorRows b
       coerceR = unsafeCoerce
-  
+
   sequence :: forall a m. Applicative m => Veither errorRows (m a) -> m (Veither errorRows a)
   sequence v = veither (const (pure (coerceR v))) (\a -> pure <$> a) v
     where
@@ -222,12 +222,12 @@ instance semigroupVeither :: (Semigroup b) => Semigroup (Veither errorRows b) wh
 -- | consume v = veither handleError handleSuccess v
 -- |   where
 -- |   handleError :: Variant (a :: Int, b :: String, c :: Boolean)
--- |   handleError = 
+-- |   handleError =
 -- |     case_
 -- |       # on (Proxy :: Proxy "a") show
 -- |       # on (Proxy :: Proxy "b") show
 -- |       # on (Proxy :: Proxy "c") show
--- | 
+-- |
 -- |   handleSuccess :: Number -> String
 -- |   handleSuccess = show
 -- | ```
@@ -250,12 +250,12 @@ veither handleError handleSuccess (Veither v) = case coerceV v of
 vsafe ∷ forall a. Veither () a → a
 vsafe (Veither v) = on _veither identity case_ v
 
--- | Removes one of the possible error types in the `Veither` by converting its value 
--- | to a value of type `a`, the 'happy path' type. This can be useful for gradually 
+-- | Removes one of the possible error types in the `Veither` by converting its value
+-- | to a value of type `a`, the 'happy path' type. This can be useful for gradually
 -- | picking off some of the errors the `Veither` value could have by handling only
 -- | some of them at a given point in your code.
 -- |
--- | If the number of errors in your `Veither` are small and can all be handled via `vhandle`, 
+-- | If the number of errors in your `Veither` are small and can all be handled via `vhandle`,
 -- | one can use `vsafe` to extract the value of the 'happy path' `a` type.
 -- |
 -- | ```
@@ -350,8 +350,8 @@ vhandleErrors rec ve@(Veither v) = case coerceV v of
 -- | vfromEither p (Right Int) :: forall a. Variant (foo :: a  ) Int
 -- | ```
 vfromEither ∷ forall sym otherRows errorRows a b
-  .  IsSymbol sym 
-  => Row.Cons sym a otherRows ("_" :: b | errorRows) 
+  .  IsSymbol sym
+  => Row.Cons sym a otherRows ("_" :: b | errorRows)
   => Proxy sym -> Either a b -> Veither errorRows b
 vfromEither proxy = either (\e -> Veither (inj proxy e)) (\a -> Veither (inj _veither a))
 
@@ -467,14 +467,14 @@ genVeitherUniform :: forall a errorRows otherGenRows rowList
   -- 3. Pass all this information into the type class instance,
   => GenVariantUniform ("_" :: Gen a | otherGenRows) rowList ("_" :: a | errorRows)
   -- 1. Given a record that has a generator for every value in the row
-  => Record ("_" :: Gen a | otherGenRows) 
+  => Record ("_" :: Gen a | otherGenRows)
   -> Gen (Veither errorRows a)
 genVeitherUniform rec = do
   let
     -- 4. Use the type class to create the list of generators
     vaList :: L.List (Gen (Variant ("_" :: a | errorRows)))
     vaList = mkUniformList rec (Proxy :: Proxy rowList)
-  
+
     -- 5. This is guaranteed to be non-empty because there will always be a ("_" :: a) row
     vaNEA :: NonEmptyArray (Gen (Variant ("_" :: a | errorRows)))
     vaNEA = unsafePartial $ fromJust $ NEA.fromFoldable vaList
@@ -514,7 +514,7 @@ genVeitherFrequncy :: forall a errorRows otherGenRows rowList
 --       and the corresponding type of the label stores two pieces of information:
 --         a. an number that indicates how frequently a label's generator should be used used, and
 --         b. the generator for the label's type
-  => Record ("_" :: Tuple Number (Gen a) | otherGenRows) 
+  => Record ("_" :: Tuple Number (Gen a) | otherGenRows)
   -> Gen (Veither errorRows a)
 genVeitherFrequncy rec = do
   let
@@ -559,13 +559,13 @@ instance variantArbitrarysNil ∷ VariantArbitrarys ignore RL.Nil where
   variantArbitrarys _ _ = L.Nil
 
 instance variantArbitrarysCons ∷ (
-  IsSymbol sym, 
-  VariantArbitrarys final rlTail, 
+  IsSymbol sym,
+  VariantArbitrarys final rlTail,
   Row.Cons sym a rowTail final,
   Arbitrary a
   ) ⇒ VariantArbitrarys final (RL.Cons sym a rlTail) where
   variantArbitrarys _ _ = do
-    let 
+    let
       va :: Gen (Variant final)
       va = do
         a <- arbitrary :: Gen a
@@ -573,10 +573,10 @@ instance variantArbitrarysCons ∷ (
           v :: Variant final
           v = inj (Proxy :: Proxy sym) a
         pure v
-    
+
     L.Cons va (variantArbitrarys (Proxy :: Proxy final) (Proxy ∷ Proxy rlTail))
 
-foreign import data UnknownVariantValue :: Type 
+foreign import data UnknownVariantValue :: Type
 
 instance coarbitraryVeither :: (
   RL.RowToList ("_" :: a | errorRows) rl,
@@ -597,11 +597,11 @@ instance variantCoarbitrarysNil :: VariantCoarbitrarys RL.Nil where
   variantCoarbitrarys _ _ = impossible "coarbtirary"
 
 instance variantCoarbitrarysCons :: (
-  IsSymbol sym, 
-  Coarbitrary a, 
+  IsSymbol sym,
+  Coarbitrary a,
   VariantCoarbitrarys tail) => VariantCoarbitrarys (RL.Cons sym a tail) where
-  variantCoarbitrarys _ a = 
-    if a.type == reflectSymbol (Proxy :: Proxy sym) 
+  variantCoarbitrarys _ a =
+    if a.type == reflectSymbol (Proxy :: Proxy sym)
       then coarbitrary (coerceA a.value)
       else variantCoarbitrarys (Proxy :: Proxy tail) a
     where
@@ -617,15 +617,15 @@ instance genVariantUniformNil :: GenVariantUniform ignore1 RL.Nil ignore2 where
 
 instance genVariantUniformCons :: (
   Row.Cons sym (Gen a) other recordRows,
-  IsSymbol sym, 
+  IsSymbol sym,
   Row.Cons sym a otherVariantRows variantRows,
   GenVariantUniform recordRows tail variantRows
   ) => GenVariantUniform recordRows (RL.Cons sym (Gen a) tail) variantRows where
   mkUniformList rec _ = do
     let
       _sym = Proxy :: Proxy sym
-      
-      genA :: Gen a 
+
+      genA :: Gen a
       genA = get _sym rec
 
       genV :: Gen (Variant variantRows)
@@ -644,7 +644,7 @@ instance genVariantFrequencyNil :: GenVariantFrequency ignore1 ignore2 RL.Nil ig
 
 instance genVariantFrequencyCons :: (
   Row.Cons sym (Tuple b (Gen a)) other recordRows,
-  IsSymbol sym, 
+  IsSymbol sym,
   Row.Cons sym a otherVariantRows variantRows,
   GenVariantFrequency recordRows b tail variantRows
   ) => GenVariantFrequency recordRows b (RL.Cons sym (Tuple b (Gen a)) tail) variantRows where
@@ -654,7 +654,7 @@ instance genVariantFrequencyCons :: (
 
       theTuple :: Tuple b (Gen a)
       theTuple = get _sym rec
-      
+
       genV :: Gen a -> Gen (Variant variantRows)
       genV genA = do
         a <- genA

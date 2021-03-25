@@ -243,7 +243,7 @@ checkGenerators = do
 
   log "Checking genVeitherFrequency"
   quickCheckGen do
-    v <- genVeitherFrequncy 
+    v <- genVeitherFrequncy
       -- the below style shows what we need to do if we don't
       -- define a record like `r` in the `genVeitherUniform` example
       { "_": Tuple 1.0 $ pure 10 :: Tuple Number (Gen Int)
