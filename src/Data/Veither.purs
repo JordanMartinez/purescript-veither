@@ -19,8 +19,8 @@ import Data.Newtype (class Newtype)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Traversable (class Traversable)
 import Data.Tuple (Tuple)
-import Data.Variant (Variant, case_, inj, on)
-import Data.Variant.Internal (VariantRep(..), impossible)
+import Data.Variant (class VariantMatchCases, Variant, case_, inj, on)
+import Data.Variant.Internal (VariantRep(..), impossible, unsafeGet, unsafeHas)
 import Partial.Unsafe (unsafePartial)
 import Prim.Row as Row
 import Prim.RowList as RL
@@ -94,6 +94,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | Below are functions that exist in `Veither` but do not exist in `Either`:
 -- | - `vsafe` (inspired by `purescript-checked-exceptions`'s `safe` function)
 -- | - `vhandle`
+-- | - `vhandleErrors` (inspired by `purescript-checked-exceptions`'s `handleErrors` function)
 -- | - `vfromEither`
 -- | - `genVeitherUniform` - same as `genEither` but with uniform probability
 -- | - `genVeitherFrequency` - same as `genEither` but with user-specified probability
@@ -286,6 +287,58 @@ vhandle proxy f variant@(Veither v) = case coerceV v of
 
   coerceVeither ∷ Veither errorRows a → Veither otherErrorRows a
   coerceVeither = unsafeCoerce
+
+-- | Removes one, some, or all of the possible error types in the `Veither`
+-- | by converting its value to a value of type `a`, the 'happy path' type.
+-- |
+-- | Note: you will get a compiler error unless you add annotations
+-- | to the record argument. You can do this by defining defining the record
+-- | using a `let` statement or by annotating it inline
+-- | (e.g. { a: identity} :: { a :: Int -> Int }`).
+-- |
+-- | If all errors are handled via `vhandleErrors`,
+-- | one can use `vsafe` to extract the value of the 'happy path' `a` type.
+-- |
+-- | Doing something like `vhandleErrors {"_": \(i :: Int) -> i} v` will
+-- | fail to compile. If you want to handle all possible values in the
+-- |`Veither`, use `veither` or `Data.Variant.onMatch` directly
+-- | (e.g. `onMatch record <<< un Veither`) instead of this function.
+-- |
+-- | Example usage:
+-- | ```
+-- | _a :: Proxy "a"
+-- | _a = Proxy
+-- |
+-- | _b :: Proxy "b"
+-- | _b = Proxy
+-- |
+-- | va :: Veither (a :: Int, b :: Boolean, c :: List String) String
+-- | va = Veither $ inj _a 4
+-- |
+-- | vb :: Veither (a :: Int, b :: Boolean, c :: List String) String
+-- | vb = Veither $ inj _b false
+-- |
+-- | handlers :: Record (a :: Int -> String, b :: Boolean -> String)
+-- | handlers = { a: show, b: show }
+-- |
+-- | vhandleErrors handlers va == ((pure "4") :: Veither (c :: List String) String)
+-- | vhandleErrors handlers vb == ((pure "false") :: Veither (c :: List String) String)
+-- | ````
+vhandleErrors ∷ forall handlers rlHandlers handledRows remainingErrorRows allErrorRows a
+  .  RL.RowToList handlers rlHandlers
+  => VariantMatchCases rlHandlers handledRows a
+  => Row.Union handledRows ("_" :: a | remainingErrorRows) ("_" :: a | allErrorRows)
+  => { | handlers } -> Veither allErrorRows a → Veither remainingErrorRows a
+vhandleErrors rec ve@(Veither v) = case coerceV v of
+  VariantRep a | a.type /= "_", unsafeHas a.type rec →
+    Veither (inj _veither ((unsafeGet a.type rec) a.value))
+  _ → Veither (coerceR v)
+  where
+    coerceV ∷ ∀ b. Variant ("_" :: a | allErrorRows) → VariantRep b
+    coerceV = unsafeCoerce
+
+    coerceR ∷ Variant ("_" :: a | allErrorRows) → Variant ("_" :: a | remainingErrorRows)
+    coerceR = unsafeCoerce
 
 -- | Convert an `Either` into a `Veither`.
 -- |

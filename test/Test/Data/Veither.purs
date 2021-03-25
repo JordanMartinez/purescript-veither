@@ -6,7 +6,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Data.Variant (Variant, case_, on, inj)
-import Data.Veither (Veither(..), genVeitherFrequncy, genVeitherUniform, veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhandle, vhush, vnote, vnote', vsafe)
+import Data.Veither (Veither(..), genVeitherFrequncy, genVeitherUniform, veither, vfromEither, vfromLeft, vfromLeft', vfromRight, vfromRight', vhandle, vhandleErrors, vhush, vnote, vnote', vsafe)
 import Effect (Effect)
 import Effect.Console (log)
 import Test.QuickCheck (quickCheckGen)
@@ -23,6 +23,7 @@ type Y r = (y :: Int | r)
 
 type E0 = () :: Row Type
 type E1_X = X ()
+type E1_Y = Y ()
 type E2_XY = X (Y ())
 
 _x = Proxy :: Proxy "x"
@@ -33,13 +34,18 @@ x = 20 :: Int
 y = 30 :: Int
 
 v0a =                pure a :: Veither E0 Int
-
--- these are only used in the `vhandle` test
 v0x =                pure x :: Veither E0 Int
 v0y =                pure y :: Veither E0 Int
 
+-- v<number of errors>_<which error rows are included>_<value>
+
 v1_x_a =             pure a :: Veither E1_X Int
 v1_x_x = Veither $ inj _x x :: Veither E1_X Int
+v1_x_y =             pure y :: Veither E1_X Int
+
+v1_y_a =             pure a :: Veither E1_Y Int
+v1_y_x =             pure x :: Veither E1_Y Int
+v1_y_y = Veither $ inj _y y :: Veither E1_Y Int
 
 v2_xy_a =             pure a :: Veither E2_XY Int
 v2_xy_x = Veither $ inj _x x :: Veither E2_XY Int
@@ -91,6 +97,43 @@ spec = do
       vhandle _x identity (vhandle _y identity v2_xy_a) `shouldEqual` v0a
       vhandle _x identity (vhandle _y identity v2_xy_x) `shouldEqual` v0x
       vhandle _x identity (vhandle _y identity v2_xy_y) `shouldEqual` v0y
+    describe "vhandleErrors works" do
+      it "reduces one error down to zero" do
+        let
+          -- h_<all initial rows, including a>_<final rows, including a>
+          h_xa_a :: { x :: Int -> Int }
+          h_xa_a = { x: identity }
+
+        vhandleErrors h_xa_a v1_x_a `shouldEqual` v0a
+        vhandleErrors h_xa_a v1_x_x `shouldEqual` v0x
+
+      it "reduces two errors down to one error" do
+        let
+          -- h_<all initial rows, including a>_<final rows, including a>
+          h_xya_ya :: { x :: Int -> Int }
+          h_xya_ya = { x: identity }
+
+        vhandleErrors h_xya_ya v2_xy_a `shouldEqual` v1_y_a
+        vhandleErrors h_xya_ya v2_xy_x `shouldEqual` v1_y_x
+        vhandleErrors h_xya_ya v2_xy_y `shouldEqual` v1_y_y
+
+        let
+          -- h_<all initial rows, including a>_<final rows, including a>
+          h_xya_xa :: { y :: Int -> Int }
+          h_xya_xa = { y: identity }
+        vhandleErrors h_xya_xa v2_xy_a `shouldEqual` v1_x_a
+        vhandleErrors h_xya_xa v2_xy_x `shouldEqual` v1_x_x
+        vhandleErrors h_xya_xa v2_xy_y `shouldEqual` v1_x_y
+      it "reduces two errors down to zero errors" do
+        let
+          -- h_<all initial rows, including a>_<final rows, including a>
+          h_xya_a :: { x :: Int -> Int, y :: Int -> Int }
+          h_xya_a = { x: identity, y: identity }
+        vhandleErrors h_xya_a v2_xy_a `shouldEqual` v0a
+        vhandleErrors h_xya_a v2_xy_x `shouldEqual` v0x
+        vhandleErrors h_xya_a v2_xy_y `shouldEqual` v0y
+      -- it "attempting to change the '_' label's value won't compile" do
+      --   vhandleErrors {"_": \(i :: Int) -> i + 1} v0a `shouldEqual` (map (_ + 1) v0a)
     it "vfromEither works" do
       vfromEither _x er10 `shouldEqual` v1_x_a
       vfromEither _x el20 `shouldEqual` v1_x_x
