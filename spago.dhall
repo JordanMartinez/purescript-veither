@@ -19,7 +19,6 @@
   , "quickcheck-laws"
   , "record"
   , "spec"
-  , "transformers"
   , "tuples"
   , "unsafe-coerce"
   , "variant"
