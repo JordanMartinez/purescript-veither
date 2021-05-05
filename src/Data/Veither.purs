@@ -157,9 +157,6 @@ instance applyVeither ∷ Apply (Veither errorRows) where
     coerceVF ∷ forall a b. Variant ("_" ∷ (a → b) | errorRows) → VariantRep (a → b)
     coerceVF = unsafeCoerce
 
-    coerceVA ∷ forall a. Variant ("_" ∷ a | errorRows) → VariantRep a
-    coerceVA = unsafeCoerce
-
     coerceR ∷ forall a b. Variant ("_" ∷ a | errorRows) → Variant ("_" ∷ b | errorRows)
     coerceR = unsafeCoerce
 
@@ -329,7 +326,7 @@ vhandleErrors ∷ forall handlers rlHandlers handledRows remainingErrorRows allE
   => VariantMatchCases rlHandlers handledRows a
   => Row.Union handledRows ("_" :: a | remainingErrorRows) ("_" :: a | allErrorRows)
   => { | handlers } -> Veither allErrorRows a → Veither remainingErrorRows a
-vhandleErrors rec ve@(Veither v) = case coerceV v of
+vhandleErrors rec (Veither v) = case coerceV v of
   VariantRep a | a.type /= "_", unsafeHas a.type rec →
     Veither (inj _veither ((unsafeGet a.type rec) a.value))
   _ → Veither (coerceR v)
