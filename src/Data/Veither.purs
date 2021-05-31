@@ -30,6 +30,7 @@ import Test.QuickCheck.Gen (Gen, oneOf, frequency)
 import Type.Proxy (Proxy(..))
 import Unsafe.Coerce (unsafeCoerce)
 
+newtype Veither ∷ Row Type → Type → Type
 -- | `Veither` is the same as `Either` except that the `l` type can be zero to many different types.
 -- | `Veither` has all the instances that `Either` has, except for `Eq1` and `Ord1`, which simply
 -- | haven't been implemented yet. If you would use a function from `Data.Either` (e.g. hush) and
@@ -99,7 +100,6 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | - `genVeitherUniform` - same as `genEither` but with uniform probability
 -- | - `genVeitherFrequency` - same as `genEither` but with user-specified probability
 -- |
-newtype Veither ∷ Row Type → Type → Type
 newtype Veither errorRows a = Veither (Variant ("_" ∷ a | errorRows))
 
 -- | Proxy type for `Veither`'s happy path (e.g. `Either`'s `Right` constructor).
