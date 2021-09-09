@@ -66,11 +66,11 @@ foo = do
 
 main :: Effect Unit
 main = do
-  -- if you would use `fromRight` (or some other
+  -- if you would use `either` (or some other
   -- `Either` function) for `Either`, 
   -- add a 'v' in front of it and you have the
   -- corresponding function name for `Veither`
-  log $ vfromRight handleFailure foo 
+  log $ veither handleFailure identity foo 
   where
   handleFailure :: Variant PossibleErrors -> String
   handleFailure =
