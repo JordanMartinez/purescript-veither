@@ -268,8 +268,8 @@ vsafe (Veither v) = on _veither identity case_ v
 -- | vhandle _b show bar == ((pure "3") :: Veither () String)
 -- | vhandle _b show foo == ((pure "2") :: Veither () String)
 -- |
--- | safe (vhandle _b show bar) == "3"
--- | safe (vhandle _b show foo) == "2"
+-- | vsafe (vhandle _b show bar) == "3"
+-- | vsafe (vhandle _b show foo) == "2"
 -- | ````
 vhandle ∷ forall sym b otherErrorRows errorRows a
   .  IsSymbol sym
